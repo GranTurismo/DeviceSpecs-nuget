@@ -1,0 +1,38 @@
+name: Publish NuGet Package
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Build & Publish to NuGet
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore DeviceSpecs/DeviceSpecs.csproj
+
+      - name: Build Package
+        run: dotnet build DeviceSpecs/DeviceSpecs.csproj -c Release --no-restore
+
+      - name: Pack NuGet Package
+        run: dotnet pack DeviceSpecs/DeviceSpecs.csproj -c Release --no-build -o out
+
+      - name: Push to NuGet.org
+        run: dotnet nuget push out/*.nupkg --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

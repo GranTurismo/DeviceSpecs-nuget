@@ -27,6 +27,7 @@ namespace DeviceSpecs
         private const string DevicesByManufacturerPath = "api/values/clean/getdevices";
         private const string DevicesByChipsetPath = "api/values/clean/devicesbychipset";
         private const string GetSpecsPath = "api/values/clean/getspecs";
+        private const string DeviceByModelNumberPath = "api/values/clean/devicebymodelnumber";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DeviceSpecsClient"/> class using a provided <see cref="HttpClient"/> and configuration.
@@ -96,36 +97,61 @@ namespace DeviceSpecs
         }
 
         /// <inheritdoc />
-        public async Task<List<DeviceSpecsResponse>> GetDevicesAsync(
+        public DeviceQueryBuilder Where()
+        {
+            return new DeviceQueryBuilder(this);
+        }
+
+        /// <inheritdoc />
+        public DeviceQueryBuilder Query()
+        {
+            return new DeviceQueryBuilder(this);
+        }
+
+        /// <inheritdoc />
+        public Task<List<DeviceSpecsResponse>> GetDevicesAsync(
             int? batteryGte = null,
             string? chipsetContains = null,
             int? minRamGb = null,
             int? maxRamGb = null,
             CancellationToken cancellationToken = default)
         {
-            var queryParams = new List<string>();
+            var builder = Query();
 
             if (batteryGte.HasValue)
             {
-                queryParams.Add($"battery_gte={batteryGte.Value}");
+                builder.WhereBatteryCapacityGte(batteryGte.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(chipsetContains))
             {
-                queryParams.Add($"chipset_contains={Uri.EscapeDataString(chipsetContains)}");
+                builder.WhereChipsetContains(chipsetContains);
             }
 
-            if (minRamGb.HasValue || maxRamGb.HasValue)
+            if (minRamGb.HasValue && maxRamGb.HasValue)
             {
-                var min = minRamGb?.ToString() ?? string.Empty;
-                var max = maxRamGb?.ToString() ?? string.Empty;
-                queryParams.Add($"ram_between={min},{max}");
+                builder.WhereRamGbBetween(minRamGb.Value, maxRamGb.Value);
+            }
+            else if (minRamGb.HasValue)
+            {
+                builder.WhereRamGbGte(minRamGb.Value);
+            }
+            else if (maxRamGb.HasValue)
+            {
+                builder.WhereRamGbLte(maxRamGb.Value);
             }
 
-            var queryString = queryParams.Count > 0
-                ? "?" + string.Join("&", queryParams)
-                : string.Empty;
+            return GetDevicesAsync(builder, cancellationToken);
+        }
 
+        /// <inheritdoc />
+        public async Task<List<DeviceSpecsResponse>> GetDevicesAsync(
+            DeviceQueryBuilder query,
+            CancellationToken cancellationToken = default)
+        {
+            if (query == null) throw new ArgumentNullException(nameof(query));
+
+            var queryString = query.ToQueryString();
             var relativeUrl = $"{DevicesPath}{queryString}";
             return await SendRequestAsync<List<DeviceSpecsResponse>>(relativeUrl, cancellationToken).ConfigureAwait(false);
         }
@@ -175,6 +201,28 @@ namespace DeviceSpecs
             }
 
             var relativeUrl = $"{GetSpecsPath}/{Uri.EscapeDataString(manufacturer.Trim())}/{Uri.EscapeDataString(model.Trim())}";
+
+            try
+            {
+                return await SendRequestAsync<DeviceSpecsResponse>(relativeUrl, cancellationToken).ConfigureAwait(false);
+            }
+            catch (DeviceSpecsApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<DeviceSpecsResponse?> GetDeviceByModelNumberAsync(
+            string modelNumber,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(modelNumber))
+            {
+                throw new ArgumentException("Model number cannot be null or empty.", nameof(modelNumber));
+            }
+
+            var relativeUrl = $"{DeviceByModelNumberPath}/{Uri.EscapeDataString(modelNumber.Trim())}";
 
             try
             {

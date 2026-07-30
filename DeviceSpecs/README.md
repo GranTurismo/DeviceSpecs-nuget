@@ -69,70 +69,77 @@ class Program
 }
 ```
 
-### 2. Dependency Injection Setup (.NET Core / 8 / 10)
-For modern ASP.NET Core or worker applications, register the client in your `Program.cs`:
+---
+
+## 🔥 Fluent Deep Filtering Syntax
+
+Construct rich, expressive multi-metric queries starting with `client.Where()`:
 
 ```csharp
-using DeviceSpecs;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Register the DeviceSpecs client using the DI extension helper
-builder.Services.AddDeviceSpecsClient(options =>
-{
-    options.ApiKey = builder.Configuration["DeviceSpecs:ApiKey"] 
-                     ?? throw new InvalidOperationException("API Key is missing!");
-});
+// Fluent query with expressive filter method names
+var flagshipDevices = await client.Where()
+    .ManufacturerIs(Brands.Samsung)
+    .ChipsetContains("Snapdragon")
+    .RamGreaterThanOrEqual(8)
+    .RamLessOrEqual(16)
+    .DisplayRefreshRateGreaterThanOrEqual(120)
+    .DisplaySizeGreaterThanOrEqual(6.5)
+    .BatteryGreaterThanOrEqual(5000)
+    .HasWirelessCharging()
+    .HasStereoSpeakers()
+    .PriceUsdLessOrEqual(1200)
+    .ExecuteAsync(cancellationToken);
 ```
 
-Then inject `IDeviceSpecsClient` into your services or controllers:
+### Multi-Brand Filtering
+Query across multiple manufacturers effortlessly:
 
 ```csharp
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using DeviceSpecs;
+var budgetMidrangers = await client.Where()
+    .ManufacturerBetween(Brands.Samsung, Brands.Xiaomi, Brands.Oppo)
+    .RamGreaterThan(8)
+    .HasNfc()
+    .PriceUsdLessThan(800)
+    .ExecuteAsync(cancellationToken);
+```
 
-[ApiController]
-[Route("api/devices")]
-public class DevicesController : ControllerBase
-{
-    private readonly IDeviceSpecsClient _client;
+### Custom & Raw Property Escapes
+You can also append custom or raw property filters for maximum flexibility:
 
-    public DevicesController(IDeviceSpecsClient client)
-    {
-        _client = client;
-    }
+```csharp
+var customQuery = client.Where()
+    .WithCustomFilter("memory.available_storage_gb", "gte", 256)
+    .WithCustomFilter("physical.ip_rating", "contains", "IP68");
 
-    [HttpGet("{manufacturer}/{model}")]
-    public async Task<IActionResult> GetDeviceDetails(string manufacturer, string model)
-    {
-        var specs = await _client.GetSpecsAsync(manufacturer, model);
-        if (specs == null) return NotFound("Device not found.");
-        return Ok(specs);
-    }
-}
+// View generated query string before executing
+Console.WriteLine(customQuery.ToQueryString());
+
+var results = await customQuery.ExecuteAsync();
 ```
 
 ---
 
 ## 📖 API Reference
 
-### List and Filter Devices
-Retrieve a filtered list of mobile devices based on specifications.
+### Fluent Query Builder
 ```csharp
-// Filter devices with battery >= 5000mAh, Snapdragon chip, and RAM between 8GB and 12GB
-var devices = await client.GetDevicesAsync(
-    batteryGte: 5000,
-    chipsetContains: "Snapdragon",
-    minRamGb: 8,
-    maxRamGb: 12
-);
+var devices = await client.Where()
+    .ManufacturerIs(Brands.Google)
+    .RamGreaterThanOrEqual(12)
+    .DisplayRefreshRateGreaterThanOrEqual(120)
+    .ExecuteAsync();
+```
+
+### Get Devices by Model Number Variant
+Retrieve a device matching a specific hardware variant or model string (e.g., "SM-S928B", "A3106").
+```csharp
+var variant = await client.GetDeviceByModelNumberAsync("SM-S928B");
 ```
 
 ### Get Devices by Manufacturer
 Retrieve all tracked devices for a specific brand.
 ```csharp
-var appleDevices = await client.GetDevicesByManufacturerAsync("Apple");
+var appleDevices = await client.GetDevicesByManufacturerAsync(Brands.Apple);
 ```
 
 ### Get Devices by Chipset

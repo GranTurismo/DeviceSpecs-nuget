@@ -11,6 +11,18 @@ namespace DeviceSpecs
     public interface IDeviceSpecsClient
     {
         /// <summary>
+        /// Initiates a fluent query filter (e.g. client.Where().ManufacturerIs("Samsung").RamGreaterThan(8).ExecuteAsync()).
+        /// </summary>
+        /// <returns>A new <see cref="DeviceQueryBuilder"/> attached to this client.</returns>
+        DeviceQueryBuilder Where();
+
+        /// <summary>
+        /// Creates a fluent query builder to construct deep multi-metric filters (e.g. RAM, display, battery, cameras, price, features).
+        /// </summary>
+        /// <returns>A new <see cref="DeviceQueryBuilder"/> attached to this client.</returns>
+        DeviceQueryBuilder Query();
+
+        /// <summary>
         /// Retrieves a list of mobile devices matching the specified filter parameters.
         /// </summary>
         /// <param name="batteryGte">Filter devices with battery capacity greater than or equal to this value (in mAh).</param>
@@ -24,6 +36,16 @@ namespace DeviceSpecs
             string? chipsetContains = null,
             int? minRamGb = null,
             int? maxRamGb = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Retrieves a list of mobile devices matching the specified fluent query.
+        /// </summary>
+        /// <param name="query">The fluent device query containing filter parameters.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A list of device specifications matching the criteria.</returns>
+        Task<List<DeviceSpecsResponse>> GetDevicesAsync(
+            DeviceQueryBuilder query,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -56,6 +78,16 @@ namespace DeviceSpecs
         Task<DeviceSpecsResponse?> GetSpecsAsync(
             string manufacturer,
             string model,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Retrieves a device by matching its hardware model number or variant identifier (e.g. "SM-S928B", "A3106").
+        /// </summary>
+        /// <param name="modelNumber">The model number variant string.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The detailed specifications of the matching device, or null if not found.</returns>
+        Task<DeviceSpecsResponse?> GetDeviceByModelNumberAsync(
+            string modelNumber,
             CancellationToken cancellationToken = default);
     }
 }
