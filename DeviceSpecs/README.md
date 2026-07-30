@@ -1,29 +1,36 @@
 # DeviceSpecs Client SDK (.NET)
 
-A strongly-typed, high-performance .NET client library for the **DeviceSpecs API**. Access structured, clean, and normalized specifications, chipsets, and physical metrics for over 12,000 mobile devices.
+[![NuGet Version](https://img.shields.io/nuget/v/DeviceSpecs.svg)](https://www.nuget.org/packages/DeviceSpecs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Sourced dynamically and formatted in standardized JSON, perfect for database seeding, application schemas, and AI/LLM model context windows.
+A strongly-typed, high-performance C# / .NET client library for the **[DeviceSpecs API](https://ds.gtgroup.dev)**. Access structured, clean, and normalized specifications, chipsets, and physical metrics for over 12,000 mobile devices.
+
+Sourced dynamically and formatted in standardized JSON, perfect for database seeding, mobile application backends, and AI/LLM model context windows.
 
 ---
 
-## 🔑 Getting an API Key
+## 🌐 Official Website, API Portal & Live Testing
 
-To use this library, you need an API key:
-1. Go to [ds.gtgroup.dev](https://ds.gtgroup.dev).
-2. Register for a free developer key or subscribe to a premium plan.
-3. Keep your API key secure.
+For API key generation, interactive testing, endpoint documentation, and subscription management, visit our official portal:
+
+👉 **[https://ds.gtgroup.dev](https://ds.gtgroup.dev)**
+
+### Key Resources on [ds.gtgroup.dev](https://ds.gtgroup.dev):
+* 🔑 **API Key Management**: Obtain a free developer API key or upgrade your plan.
+* 🧪 **Interactive API Playground**: Test queries, endpoints, and filters directly in your browser.
+* 📖 **API Documentation**: Browse full spec models, filter parameters, and dataset details.
 
 ---
 
 ## 🚀 Installation
 
-Install the package via the NuGet CLI:
+Install the package via the .NET CLI:
 
 ```bash
 dotnet add package DeviceSpecs
 ```
 
-Or via the Package Manager Console:
+Or via Package Manager Console:
 
 ```powershell
 Install-Package DeviceSpecs
@@ -34,8 +41,6 @@ Install-Package DeviceSpecs
 ## 🛠️ Usage Quick Start
 
 ### 1. Direct Instantiation
-For simple applications or console utilities, instantiate the client directly:
-
 ```csharp
 using System;
 using System.Threading.Tasks;
@@ -45,7 +50,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        // Initialize the client with your key from ds.gtgroup.dev
+        // Obtain your API key from https://ds.gtgroup.dev
         using var client = new DeviceSpecsClient("YOUR_API_KEY");
 
         try
@@ -67,6 +72,22 @@ class Program
         }
     }
 }
+```
+
+### 2. Dependency Injection Setup (.NET Core / 8 / 10)
+In `Program.cs`:
+
+```csharp
+using DeviceSpecs;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register the DeviceSpecs client using DI extension helper
+builder.Services.AddDeviceSpecsClient(options =>
+{
+    options.ApiKey = builder.Configuration["DeviceSpecs:ApiKey"] 
+                     ?? throw new InvalidOperationException("API Key is missing!");
+});
 ```
 
 ---
@@ -104,14 +125,14 @@ var budgetMidrangers = await client.Where()
 ```
 
 ### Custom & Raw Property Escapes
-You can also append custom or raw property filters for maximum flexibility:
+For maximum flexibility, append custom key-value property filters:
 
 ```csharp
 var customQuery = client.Where()
     .WithCustomFilter("memory.available_storage_gb", "gte", 256)
     .WithCustomFilter("physical.ip_rating", "contains", "IP68");
 
-// View generated query string before executing
+// Print generated URL query string for debugging or logging
 Console.WriteLine(customQuery.ToQueryString());
 
 var results = await customQuery.ExecuteAsync();
@@ -121,38 +142,15 @@ var results = await customQuery.ExecuteAsync();
 
 ## 📖 API Reference
 
-### Fluent Query Builder
-```csharp
-var devices = await client.Where()
-    .ManufacturerIs(Brands.Google)
-    .RamGreaterThanOrEqual(12)
-    .DisplayRefreshRateGreaterThanOrEqual(120)
-    .ExecuteAsync();
-```
+| Method | Description |
+| :--- | :--- |
+| `client.Where()` | Initiates a fluent query builder chain. |
+| `client.GetSpecsAsync(manufacturer, model)` | Fetches raw & normalized specifications for a device model. |
+| `client.GetDeviceByModelNumberAsync(modelNumber)` | Fetches device specifications by hardware variant identifier (e.g. `SM-S928B`). |
+| `client.GetDevicesByManufacturerAsync(manufacturer)` | Returns all devices for a given manufacturer. |
+| `client.GetDevicesByChipsetAsync(chipset)` | Returns all devices powered by a specific SoC / chipset. |
 
-### Get Devices by Model Number Variant
-Retrieve a device matching a specific hardware variant or model string (e.g., "SM-S928B", "A3106").
-```csharp
-var variant = await client.GetDeviceByModelNumberAsync("SM-S928B");
-```
-
-### Get Devices by Manufacturer
-Retrieve all tracked devices for a specific brand.
-```csharp
-var appleDevices = await client.GetDevicesByManufacturerAsync(Brands.Apple);
-```
-
-### Get Devices by Chipset
-Retrieve all devices powered by a specific SoC (system on chip).
-```csharp
-var tensorDevices = await client.GetDevicesByChipsetAsync("Google Tensor G4");
-```
-
-### Get Specific Device Specifications
-Retrieve full raw and normalized specs for a specific manufacturer and model.
-```csharp
-var pixelSpecs = await client.GetSpecsAsync(Brands.Google, "Pixel 9 Pro");
-```
+For detailed interactive API testing and live requests, visit **[ds.gtgroup.dev](https://ds.gtgroup.dev)**.
 
 ---
 
