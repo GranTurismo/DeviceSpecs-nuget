@@ -1,0 +1,38 @@
+# Publishes the .NET MCP server (NuGet package DeviceSpecs.Mcp) whose source lives in
+# GranTurismo/DeviceSpecs-mcp (folder dotnet/). It runs from this repo so it can reuse the
+# NUGET_KEY secret already configured for the DeviceSpecs SDK. Manual trigger only.
+name: Publish DeviceSpecs.Mcp (MCP server)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref of GranTurismo/DeviceSpecs-mcp to publish'
+        required: false
+        default: 'main'
+        type: string
+
+jobs:
+  publish:
+    name: Pack & Publish DeviceSpecs.Mcp
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout DeviceSpecs-mcp
+        uses: actions/checkout@v4
+        with:
+          repository: GranTurismo/DeviceSpecs-mcp
+          ref: ${{ inputs.ref || 'main' }}
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Pack
+        run: dotnet pack dotnet/DeviceSpecs.Mcp/DeviceSpecs.Mcp.csproj -c Release -o out
+
+      - name: Push to NuGet.org
+        run: dotnet nuget push out/*.nupkg --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
